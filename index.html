@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f4ef">
+    <title>Gỡ chữ — Trợ lý đoán từ</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="words-data.js" defer></script>
+    <script src="app.js" defer></script>
+</head>
+<body>
+<main class="app">
+    <header class="heading">
+        <div class="brand"><span class="brand-icon" aria-hidden="true">g</span> GỠ CHỮ <span class="brand-tag">TRỢ LÝ ĐOÁN TỪ</span></div>
+        <h1>Từng ký tự, <span>gần đáp án hơn.</span></h1>
+        <p>Nhập độ dài hai tiếng. Điền những chữ đã biết. Tìm từ còn lại.</p>
+    </header>
+
+    <section class="panel" aria-labelledby="length-heading">
+        <div class="section-title"><span class="step">01</span><h2 id="length-heading">Từ của bạn có bao nhiêu chữ?</h2></div>
+        <form id="search-form">
+            <div class="length-fields">
+                <label for="count-1">Tiếng thứ nhất<input id="count-1" name="count_1" type="number" inputmode="numeric" min="1" max="30" step="1" value="3" required><span>Số ký tự</span></label>
+                <span class="plus" aria-hidden="true">+</span>
+                <label for="count-2">Tiếng thứ hai<input id="count-2" name="count_2" type="number" inputmode="numeric" min="1" max="30" step="1" value="4" required><span>Số ký tự</span></label>
+                <button class="primary" id="search-button" type="submit">Tìm từ <span aria-hidden="true">↗</span></button>
+            </div>
+        </form>
+        <p class="hint">Đếm chữ có dấu là một ký tự. Ví dụ: “học sinh” có độ dài 3 + 4.</p>
+        <p id="request-status" class="request-status" role="status" hidden></p>
+    </section>
+
+    <section id="filter-panel" class="panel" aria-labelledby="filter-heading" hidden>
+        <div class="section-title"><span class="step">02</span><h2 id="filter-heading">Điền ký tự đã đúng</h2><button id="clear-letters" class="text-button" type="button">Xóa ký tự</button></div>
+        <p class="hint filter-hint">Để trống ô chưa biết. Dùng Tab hoặc phím ← → để chuyển ô.</p>
+        <div id="letter-groups" class="letter-groups"></div>
+        <label class="checkbox"><input type="checkbox" id="ignore-accents">Bỏ qua dấu tiếng Việt <span>(a khớp á, à, ă, â…; d khớp đ)</span></label>
+    </section>
+
+    <section class="results" aria-labelledby="results-heading">
+        <div class="results-header"><h2 id="results-heading">Các từ phù hợp <span id="result-count" class="badge">—</span></h2><span id="result-summary">Đang chờ gợi ý của bạn</span></div>
+        <div id="empty-state" class="empty-state"><span class="empty-icon" aria-hidden="true">a<span>?</span></span><h3>Bắt đầu từ độ dài</h3><p>Chọn số ký tự của hai tiếng rồi nhấn “Tìm từ”.</p></div>
+        <div id="word-list" class="word-list" hidden></div>
+        <button id="show-more" class="more-button" type="button" hidden>Xem thêm</button>
+    </section>
+    <footer>Mỗi ô là một ký tự <span>·</span> Lọc ngay khi nhập <span>·</span> Không phân biệt hoa thường</footer>
+</main>
+</body>
+</html>
