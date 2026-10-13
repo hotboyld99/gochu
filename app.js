@@ -1,7 +1,7 @@
 'use strict';
 
 const form = document.querySelector('#search-form');
-const countInputs = [document.querySelector('#count-1'), document.querySelector('#count-2')];
+const totalCountInput = document.querySelector('#total-count');
 const status = document.querySelector('#request-status');
 const filterPanel = document.querySelector('#filter-panel');
 const groups = document.querySelector('#letter-groups');
@@ -16,7 +16,7 @@ const summary = document.querySelector('#result-summary');
 const more = document.querySelector('#show-more');
 let words = [];
 let matches = [];
-let slots = [[], []];
+let slots = [];
 let rendered = 0;
 let wordIndex = null;
 const pageSize = 120;
@@ -33,7 +33,7 @@ function getWordIndex() {
     const index = new Map();
     for (const row of window.WORDS_DATA.words) {
         if (typeof row.text !== 'string' || !Number.isInteger(row.count_1) || !Number.isInteger(row.count_2)) continue;
-        const key = `${row.count_1}:${row.count_2}`;
+        const key = row.count_1 + row.count_2;
         if (!index.has(key)) index.set(key, []);
         index.get(key).push(row.text);
     }
@@ -62,7 +62,7 @@ function showEmpty(title, description) {
 function resetResults() {
     words = [];
     matches = [];
-    slots = [[], []];
+    slots = [];
     filterPanel.hidden = true;
     requiredLetters.value = '';
     excludedLetters.value = '';
@@ -73,63 +73,59 @@ function resetResults() {
     badge.textContent = '—';
 }
 
-function createSlots(counts) {
-    counts.forEach((count, groupIndex) => {
-        const group = document.createElement('div');
-        group.className = 'letter-group';
-        const heading = document.createElement('h3');
-        heading.textContent = `Tiếng thứ ${groupIndex === 0 ? 'nhất' : 'hai'}`;
-        const row = document.createElement('div');
-        row.className = 'slots';
-        for (let index = 0; index < count; index++) {
-            const label = document.createElement('label');
-            label.className = 'slot';
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.placeholder = '·';
-            input.autocomplete = 'off';
-            input.spellcheck = false;
-            input.setAttribute('autocapitalize', 'none');
-            input.setAttribute('aria-label', `Tiếng ${groupIndex + 1}, ký tự ${index + 1}`);
-            // Không dùng maxlength / tự chuyển ô: bộ gõ tiếng Việt cần hoàn thành dấu.
-            const update = () => {
-                input.value = chars(input.value.replace(/\s/gu, '')).slice(0, 1).join('');
-                input.classList.toggle('filled', Boolean(input.value));
-                filterWords();
-            };
-            input.addEventListener('input', event => { if (!event.isComposing) update(); });
-            input.addEventListener('compositionend', update);
-            input.addEventListener('keydown', event => {
-                if (event.isComposing) return;
-                const all = slots.flat();
-                const position = all.indexOf(input);
-                let target;
-                if (event.key === 'ArrowRight') target = all[position + 1];
-                if (event.key === 'ArrowLeft' || (event.key === 'Backspace' && !input.value)) target = all[position - 1];
-                if (target) { event.preventDefault(); target.focus(); target.select(); }
+function createSlots(count) {
+    const group = document.createElement('div');
+    group.className = 'letter-group';
+    const heading = document.createElement('h3');
+    heading.textContent = `${count} ký tự · Không tính khoảng trắng`;
+    const row = document.createElement('div');
+    row.className = 'slots';
+    for (let index = 0; index < count; index++) {
+        const label = document.createElement('label');
+        label.className = 'slot';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = '·';
+        input.autocomplete = 'off';
+        input.spellcheck = false;
+        input.setAttribute('autocapitalize', 'none');
+        input.setAttribute('aria-label', `Ký tự ${index + 1}`);
+        // Không dùng maxlength / tự chuyển ô: bộ gõ tiếng Việt cần hoàn thành dấu.
+        const update = () => {
+            input.value = chars(input.value.replace(/\s/gu, '')).slice(0, 1).join('');
+            input.classList.toggle('filled', Boolean(input.value));
+            filterWords();
+        };
+        input.addEventListener('input', event => { if (!event.isComposing) update(); });
+        input.addEventListener('compositionend', update);
+        input.addEventListener('keydown', event => {
+            if (event.isComposing) return;
+            let target;
+            if (event.key === 'ArrowRight') target = slots[index + 1];
+            if (event.key === 'ArrowLeft' || (event.key === 'Backspace' && !input.value)) target = slots[index - 1];
+            if (target) { event.preventDefault(); target.focus(); target.select(); }
+        });
+        input.addEventListener('focus', () => input.select());
+        input.addEventListener('paste', event => {
+            const pasted = chars((event.clipboardData?.getData('text') || '').replace(/\s/gu, ''));
+            if (!pasted.length) return;
+            event.preventDefault();
+            pasted.slice(0, count - index).forEach((character, offset) => {
+                const target = slots[index + offset];
+                target.value = character;
+                target.classList.add('filled');
             });
-            input.addEventListener('focus', () => input.select());
-            input.addEventListener('paste', event => {
-                const pasted = chars((event.clipboardData?.getData('text') || '').replace(/\s/gu, ''));
-                if (!pasted.length) return;
-                event.preventDefault();
-                pasted.slice(0, count - index).forEach((character, offset) => {
-                    const target = slots[groupIndex][index + offset];
-                    target.value = character;
-                    target.classList.add('filled');
-                });
-                filterWords();
-            });
-            const position = document.createElement('span');
-            position.textContent = index + 1;
-            position.setAttribute('aria-hidden', 'true');
-            label.append(input, position);
-            row.append(label);
-            slots[groupIndex].push(input);
-        }
-        group.append(heading, row);
-        groups.append(group);
-    });
+            filterWords();
+        });
+        const position = document.createElement('span');
+        position.textContent = index + 1;
+        position.setAttribute('aria-hidden', 'true');
+        label.append(input, position);
+        row.append(label);
+        slots.push(input);
+    }
+    group.append(heading, row);
+    groups.append(group);
 }
 
 function renderMore() {
@@ -139,14 +135,16 @@ function renderMore() {
     for (let i = rendered; i < end; i++) {
         const card = document.createElement('div');
         card.className = 'word-card';
+        let position = 0;
         matches[i].parts.forEach((part, groupIndex) => {
             if (groupIndex) card.append(' ');
-            part.forEach((character, index) => {
-                if (slots[groupIndex][index].value || required.has(fold(character))) {
+            part.forEach(character => {
+                if (slots[position].value || required.has(fold(character))) {
                     const mark = document.createElement('mark');
                     mark.textContent = character;
                     card.append(mark);
                 } else card.append(character);
+                position++;
             });
         });
         fragment.append(card);
@@ -158,17 +156,15 @@ function renderMore() {
 }
 
 function filterWords() {
-    const pattern = slots.map(group => group.map(input => fold(input.value)));
+    const pattern = slots.map(input => fold(input.value));
     const required = clueLetters(requiredLetters);
     const excluded = new Set(clueLetters(excludedLetters));
-    const conflicts = [...new Set([...required, ...pattern.flat()].filter(character => character && excluded.has(character)))];
+    const conflicts = [...new Set([...required, ...pattern].filter(character => character && excluded.has(character)))];
     clueConflict.hidden = conflicts.length === 0;
     clueConflict.textContent = conflicts.length ? `Gợi ý mâu thuẫn: ${conflicts.join(', ')} vừa phải có, vừa bị loại. Hãy kiểm tra lại các chữ hoặc tùy chọn bỏ dấu.` : '';
     matches = words.filter(word => {
-        if (!word.parts.every((part, groupIndex) =>
-            part.every((character, index) => !pattern[groupIndex][index] || fold(character) === pattern[groupIndex][index])
-        )) return false;
-        const present = new Set(word.parts.flat().map(fold));
+        if (!word.letters.every((character, index) => !pattern[index] || fold(character) === pattern[index])) return false;
+        const present = new Set(word.letters.map(fold));
         return required.every(character => present.has(character)) && [...excluded].every(character => !present.has(character));
     });
     list.replaceChildren();
@@ -190,19 +186,20 @@ form.addEventListener('submit', event => {
     resetResults();
     status.hidden = true;
     status.classList.remove('error');
-    const counts = countInputs.map(input => Number(input.value));
+    const total = Number(totalCountInput.value);
     try {
-        const candidates = getWordIndex().get(`${counts[0]}:${counts[1]}`) || [];
+        const candidates = getWordIndex().get(total) || [];
         const seen = new Set();
         words = candidates.flatMap(text => {
             const cleaned = normalize(text.trim()).replace(/\s+/gu, ' ');
             const parts = cleaned.split(' ').map(chars);
+            const letters = parts.flat();
             const key = cleaned.toLocaleLowerCase('vi');
-            if (seen.has(key) || parts.length !== 2 || parts.some((part, index) => part.length !== counts[index])) return [];
+            if (seen.has(key) || parts.length !== 2 || letters.length !== total) return [];
             seen.add(key);
-            return [{ text: cleaned, parts }];
+            return [{ text: cleaned, parts, letters }];
         }).sort((a, b) => a.text.localeCompare(b.text, 'vi'));
-        createSlots(counts);
+        createSlots(total);
         filterPanel.hidden = false;
         status.hidden = true;
         filterWords();
@@ -215,16 +212,16 @@ form.addEventListener('submit', event => {
     }
 });
 
-countInputs.forEach(input => input.addEventListener('input', () => {
+totalCountInput.addEventListener('input', () => {
     status.hidden = true;
     resetResults();
     summary.textContent = 'Đang chờ gợi ý của bạn';
     showEmpty('Tra theo độ dài mới', 'Nhấn “Tìm từ” để tải danh sách và tạo lại các ô ký tự.');
-}));
+});
 document.querySelector('#clear-letters').addEventListener('click', () => {
-    slots.flat().forEach(input => { input.value = ''; input.classList.remove('filled'); });
+    slots.forEach(input => { input.value = ''; input.classList.remove('filled'); });
     filterWords();
-    slots[0][0]?.focus();
+    slots[0]?.focus();
 });
 [requiredLetters, excludedLetters].forEach(input => {
     input.addEventListener('input', event => { if (!event.isComposing) filterWords(); });
