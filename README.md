@@ -33,6 +33,8 @@ window.WORDS_DATA = {"words":[
 2. Điền chữ đã biết vào đúng vị trí; để trống các ô chưa biết. Kết quả lọc tức thì, ký tự khớp được tô nền.
 3. Dùng Tab hoặc ← → để chuyển ô. Có thể dán một tiếng vào các ô liên tiếp trong cùng tiếng.
 4. Bật **Bỏ qua dấu tiếng Việt** nếu chỉ biết chữ cái cơ bản; mặc định khớp chính xác dấu và luôn không phân biệt hoa/thường.
-5. Nhấn **Xóa ký tự** để xem lại toàn bộ danh sách theo độ dài.
+5. Trong card **Loại dần theo ký tự**, nhập **Ký tự đã đúng** để giữ từ chứa đủ các chữ đã biết (ở bất kỳ vị trí nào trong hai tiếng). Nhập **Ký tự đã sai** để loại từ chứa một trong các chữ đó. Ví dụ: `h, c, n` và `b, đ, m`. Chữ lặp chỉ xét một lần, không yêu cầu số lần xuất hiện.
+6. Hai card lọc kết hợp tức thì và cùng dùng tùy chọn bỏ dấu. Nếu chữ vừa phải có vừa bị loại, trang sẽ báo mâu thuẫn.
+7. **Xóa vị trí** chỉ xóa các ô vị trí; **Xóa bộ lọc** chỉ xóa hai nhóm ký tự. Đổi độ dài và tìm lại sẽ bắt đầu lượt mới, xóa cả hai nhóm gợi ý.
 
 Ứng dụng lập chỉ mục theo `count_1`, `count_2`, chuẩn hóa Unicode tiếng Việt, gộp từ trùng và bỏ dòng không có đúng hai tiếng/độ dài tương ứng khi hiển thị. Các từ còn lại đều khớp gợi ý; không có xếp hạng xác suất vì dữ liệu chưa có tần suất sử dụng. Danh sách hiển thị 120 từ mỗi lượt; bộ lọc luôn xét toàn bộ kết quả cùng độ dài.

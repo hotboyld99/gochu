@@ -6,6 +6,9 @@ const status = document.querySelector('#request-status');
 const filterPanel = document.querySelector('#filter-panel');
 const groups = document.querySelector('#letter-groups');
 const ignoreAccents = document.querySelector('#ignore-accents');
+const requiredLetters = document.querySelector('#required-letters');
+const excludedLetters = document.querySelector('#excluded-letters');
+const clueConflict = document.querySelector('#clue-conflict');
 const list = document.querySelector('#word-list');
 const empty = document.querySelector('#empty-state');
 const badge = document.querySelector('#result-count');
@@ -43,6 +46,11 @@ function fold(text) {
     return ignoreAccents.checked ? text.normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd') : text;
 }
 
+function clueLetters(input) {
+    // Ignore separators without modifying the input while the user is typing Vietnamese.
+    return [...new Set(chars(input.value).filter(character => /^\p{L}\p{M}*$/u.test(character)).map(fold))];
+}
+
 function showEmpty(title, description) {
     empty.querySelector('h3').textContent = title;
     empty.querySelector('p').textContent = description;
@@ -56,6 +64,10 @@ function resetResults() {
     matches = [];
     slots = [[], []];
     filterPanel.hidden = true;
+    requiredLetters.value = '';
+    excludedLetters.value = '';
+    clueConflict.hidden = true;
+    clueConflict.textContent = '';
     list.replaceChildren();
     groups.replaceChildren();
     badge.textContent = '—';
@@ -121,6 +133,7 @@ function createSlots(counts) {
 }
 
 function renderMore() {
+    const required = new Set(clueLetters(requiredLetters));
     const fragment = document.createDocumentFragment();
     const end = Math.min(rendered + pageSize, matches.length);
     for (let i = rendered; i < end; i++) {
@@ -129,7 +142,7 @@ function renderMore() {
         matches[i].parts.forEach((part, groupIndex) => {
             if (groupIndex) card.append(' ');
             part.forEach((character, index) => {
-                if (slots[groupIndex][index].value) {
+                if (slots[groupIndex][index].value || required.has(fold(character))) {
                     const mark = document.createElement('mark');
                     mark.textContent = character;
                     card.append(mark);
@@ -146,15 +159,24 @@ function renderMore() {
 
 function filterWords() {
     const pattern = slots.map(group => group.map(input => fold(input.value)));
-    matches = words.filter(word => word.parts.every((part, groupIndex) =>
-        part.every((character, index) => !pattern[groupIndex][index] || fold(character) === pattern[groupIndex][index])
-    ));
+    const required = clueLetters(requiredLetters);
+    const excluded = new Set(clueLetters(excludedLetters));
+    const conflicts = [...new Set([...required, ...pattern.flat()].filter(character => character && excluded.has(character)))];
+    clueConflict.hidden = conflicts.length === 0;
+    clueConflict.textContent = conflicts.length ? `Gợi ý mâu thuẫn: ${conflicts.join(', ')} vừa phải có, vừa bị loại. Hãy kiểm tra lại các chữ hoặc tùy chọn bỏ dấu.` : '';
+    matches = words.filter(word => {
+        if (!word.parts.every((part, groupIndex) =>
+            part.every((character, index) => !pattern[groupIndex][index] || fold(character) === pattern[groupIndex][index])
+        )) return false;
+        const present = new Set(word.parts.flat().map(fold));
+        return required.every(character => present.has(character)) && [...excluded].every(character => !present.has(character));
+    });
     list.replaceChildren();
     rendered = 0;
     badge.textContent = number(matches.length);
     summary.textContent = `${number(matches.length)} / ${number(words.length)} từ khớp`;
     if (!matches.length) {
-        showEmpty('Chưa tìm thấy từ phù hợp', words.length ? 'Thử xóa bớt ký tự hoặc bật “Bỏ qua dấu tiếng Việt”.' : 'Không có từ hai tiếng tương ứng trong dữ liệu. Thử độ dài khác nhé.');
+        showEmpty('Chưa tìm thấy từ phù hợp', words.length ? 'Thử xóa bớt ký tự ở hai card hoặc kiểm tra tùy chọn “Bỏ qua dấu tiếng Việt”.' : 'Không có từ hai tiếng tương ứng trong dữ liệu. Thử độ dài khác nhé.');
         return;
     }
     empty.hidden = true;
@@ -203,6 +225,16 @@ document.querySelector('#clear-letters').addEventListener('click', () => {
     slots.flat().forEach(input => { input.value = ''; input.classList.remove('filled'); });
     filterWords();
     slots[0][0]?.focus();
+});
+[requiredLetters, excludedLetters].forEach(input => {
+    input.addEventListener('input', event => { if (!event.isComposing) filterWords(); });
+    input.addEventListener('compositionend', filterWords);
+});
+document.querySelector('#clear-clues').addEventListener('click', () => {
+    requiredLetters.value = '';
+    excludedLetters.value = '';
+    filterWords();
+    requiredLetters.focus();
 });
 ignoreAccents.addEventListener('change', filterWords);
 more.addEventListener('click', renderMore);

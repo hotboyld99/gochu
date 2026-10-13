@@ -31,12 +31,29 @@
         <p id="request-status" class="request-status" role="status" hidden></p>
     </section>
 
-    <section id="filter-panel" class="panel" aria-labelledby="filter-heading" hidden>
-        <div class="section-title"><span class="step">02</span><h2 id="filter-heading">Điền ký tự đã đúng</h2><button id="clear-letters" class="text-button" type="button">Xóa ký tự</button></div>
+    <div id="filter-panel" class="filter-layout" hidden>
+    <section class="panel position-panel" aria-labelledby="filter-heading">
+        <div class="section-title"><span class="step">02</span><h2 id="filter-heading">Điền ký tự đã đúng</h2><button id="clear-letters" class="text-button" type="button">Xóa vị trí</button></div>
         <p class="hint filter-hint">Để trống ô chưa biết. Dùng Tab hoặc phím ← → để chuyển ô.</p>
         <div id="letter-groups" class="letter-groups"></div>
         <label class="checkbox"><input type="checkbox" id="ignore-accents">Bỏ qua dấu tiếng Việt <span>(a khớp á, à, ă, â…; d khớp đ)</span></label>
     </section>
+
+    <section class="panel clue-panel" aria-labelledby="clue-heading">
+        <div class="section-title"><h2 id="clue-heading">Loại dần theo ký tự</h2><button id="clear-clues" class="text-button" type="button">Xóa bộ lọc</button></div>
+        <p id="clue-hint" class="hint filter-hint">Xét cả hai tiếng, không cần biết vị trí. Nhập liền hoặc cách nhau bằng dấu phẩy.</p>
+        <label class="clue-field" for="required-letters"><span class="clue-label"><span aria-hidden="true">＋</span> Ký tự đã đúng · Có trong từ</span>
+            <input id="required-letters" type="text" placeholder="Ví dụ: h, c, n" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="clue-hint required-hint">
+            <span id="required-hint" class="clue-help">Giữ từ có đủ tất cả các chữ này ở bất kỳ vị trí nào.</span>
+        </label>
+        <label class="clue-field excluded-field" for="excluded-letters"><span class="clue-label"><span aria-hidden="true">−</span> Ký tự đã sai · Không có trong từ</span>
+            <input id="excluded-letters" type="text" placeholder="Ví dụ: b, đ, m" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="clue-hint excluded-hint">
+            <span id="excluded-hint" class="clue-help">Loại từ chứa bất kỳ chữ nào trong nhóm này.</span>
+        </label>
+        <p class="hint clue-note">Dùng chung tùy chọn “Bỏ qua dấu tiếng Việt”. Chữ lặp lại chỉ tính một lần.</p>
+        <p id="clue-conflict" class="clue-conflict" role="status" hidden></p>
+    </section>
+    </div>
 
     <section class="results" aria-labelledby="results-heading">
         <div class="results-header"><h2 id="results-heading">Các từ phù hợp <span id="result-count" class="badge">—</span></h2><span id="result-summary">Đang chờ gợi ý của bạn</span></div>
