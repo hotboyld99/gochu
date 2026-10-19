@@ -43,7 +43,7 @@ Một tổng độ dài có thể khớp nhiều cách chia hai tiếng (ví d�
 
 ## Game đoán chữ
 
-Mở `game.html` cùng thư mục với `words-data.js`. Game chạy bằng HTML/JavaScript, chơi được offline, chọn ngẫu nhiên từ có ít nhất 7 ký tự (không tính khoảng trắng). Mỗi từ có tối đa 6 lượt; có thể nhập có hoặc không có khoảng trắng, không phân biệt hoa/thường. Lượt nhập thiếu/thừa ký tự, ký hiệu không hợp lệ hoặc trùng lần đoán trước không bị tính lượt. Không bắt buộc câu trả lời thuộc từ điển, để có thể thử các dấu.
+Mở `game.html` cùng thư mục với `words-data.js`. Game chạy bằng HTML/JavaScript, chơi được offline, chọn ngẫu nhiên từ có ít nhất 7 ký tự (không tính khoảng trắng). Mỗi từ có tối đa 6 lượt; có thể nhập có hoặc không có khoảng trắng, không phân biệt hoa/thường. Lượt nhập thiếu/thừa ký tự, ký hiệu không hợp lệ hoặc trùng lần đoán trước không bị tính lượt. Từ đoán phải có trong `words-data.js`, khớp cả dấu và mũ sau khi chuẩn hóa Unicode. Bỏ qua hoa/thường và khoảng trắng; từ không có trong dữ liệu bị từ chối và không mất lượt.
 
 - **Xanh lá:** đúng chữ, đúng dấu và đúng vị trí.
 - **Xanh dương:** cùng chữ gốc tại đúng vị trí, khác dấu/mũ; `d` và `đ` cùng chữ gốc.

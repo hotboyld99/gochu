@@ -56,7 +56,7 @@
                         <div id="virtual-keyboard" class="virtual-keyboard" role="group" aria-label="Bàn phím đoán từ" aria-describedby="keyboard-help"></div>
                         <p id="keyboard-help" class="keyboard-help">Phím dấu đổi nguyên âm được chọn hoặc nguyên âm gần nhất trước con trỏ trong tiếng đang gõ.</p>
                         <p id="input-help" class="help">
-                            Gõ cả từ bằng bộ gõ tiếng Việt. Không tính khoảng trắng; chữ có dấu là một ký tự.
+                            Từ đoán phải có trong dữ liệu và đúng dấu. Không tính khoảng trắng; chữ có dấu là một ký tự.
                         </p>
                         <p id="guess-message" class="message" role="status" hidden></p>
                     </form>
@@ -149,6 +149,7 @@
             };
             let state = { version: 1, used: [], history: [], active: null };
             let pool = [];
+            const dictionary = new Set();
             let storageAvailable = true;
             let historyLimit = 8;
             let composing = false;
@@ -601,6 +602,10 @@
                     showMessage(`Cần đúng ${length} ký tự, không tính khoảng trắng. Lượt này chưa bị trừ.`);
                     return;
                 }
+                if (!dictionary.has(keyOf(guess))) {
+                    showMessage("Từ này không có trong dữ liệu. Kiểm tra lại chữ và dấu; lượt đoán chưa bị trừ.");
+                    return;
+                }
                 if (round.guesses.some((previous) => keyOf(previous) === keyOf(guess))) {
                     showMessage("Bạn đã thử từ này rồi. Hãy thử một cách đoán khác; lượt chưa bị trừ.");
                     return;
@@ -636,9 +641,11 @@
                             "Không đọc được words-data.js. Hãy đặt file này cùng thư mục với game.html rồi tải lại trang.",
                         );
                     const unique = new Map();
+                    dictionary.clear();
                     window.WORDS_DATA.words.forEach((row) => {
                         if (typeof row.text !== "string") return;
                         const text = normalize(row.text);
+                        if (text) dictionary.add(keyOf(text));
                         if (!/^[\p{L}\p{M}]+(?: [\p{L}\p{M}]+)+$/u.test(text) || lettersOf(text).length < 7) return;
                         if (!unique.has(keyOf(text))) unique.set(keyOf(text), text);
                     });
