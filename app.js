@@ -2,6 +2,7 @@
 
 const form = document.querySelector('#search-form');
 const totalCountInput = document.querySelector('#total-count');
+const firstCountInput = document.querySelector('#first-count');
 const status = document.querySelector('#request-status');
 const filterPanel = document.querySelector('#filter-panel');
 const groups = document.querySelector('#letter-groups');
@@ -180,13 +181,22 @@ function filterWords() {
     renderMore();
 }
 
+function validateFirstCount() {
+    const first = Number(firstCountInput.value);
+    const total = Number(totalCountInput.value);
+    firstCountInput.setCustomValidity(firstCountInput.value !== '' && totalCountInput.validity.valid && first >= total
+        ? 'Số ký tự tiếng thứ nhất phải nhỏ hơn tổng số ký tự.' : '');
+}
+
 form.addEventListener('submit', event => {
     event.preventDefault();
+    validateFirstCount();
     if (!form.reportValidity()) return;
     resetResults();
     status.hidden = true;
     status.classList.remove('error');
     const total = Number(totalCountInput.value);
+    const firstCount = firstCountInput.value === '' ? null : Number(firstCountInput.value);
     try {
         const candidates = getWordIndex().get(total) || [];
         const seen = new Set();
@@ -196,6 +206,7 @@ form.addEventListener('submit', event => {
             const letters = parts.flat();
             const key = cleaned.toLocaleLowerCase('vi');
             if (seen.has(key) || parts.length !== 2 || letters.length !== total) return [];
+            if (firstCount !== null && parts[0].length !== firstCount) return [];
             seen.add(key);
             return [{ text: cleaned, parts, letters }];
         }).sort((a, b) => a.text.localeCompare(b.text, 'vi'));
@@ -212,12 +223,14 @@ form.addEventListener('submit', event => {
     }
 });
 
-totalCountInput.addEventListener('input', () => {
+[totalCountInput, firstCountInput].forEach(input => input.addEventListener('input', () => {
+    validateFirstCount();
     status.hidden = true;
     resetResults();
     summary.textContent = 'Đang chờ gợi ý của bạn';
     showEmpty('Tra theo độ dài mới', 'Nhấn “Tìm từ” để tải danh sách và tạo lại các ô ký tự.');
-});
+}));
+validateFirstCount();
 document.querySelector('#clear-letters').addEventListener('click', () => {
     slots.forEach(input => { input.value = ''; input.classList.remove('filled'); });
     filterWords();

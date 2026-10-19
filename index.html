@@ -13,8 +13,6 @@
 <main class="app">
     <header class="heading">
         <div class="brand"><span class="brand-icon" aria-hidden="true">g</span> GỠ CHỮ <span class="brand-tag">TRỢ LÝ ĐOÁN TỪ</span></div>
-        <h1>Từng ký tự, <span>gần đáp án hơn.</span></h1>
-        <p>Nhập tổng số ký tự. Điền những chữ đã biết. Tìm từ còn lại.</p>
     </header>
 
     <section class="panel" aria-labelledby="length-heading">
@@ -22,6 +20,7 @@
         <form id="search-form">
             <div class="length-fields">
                 <label for="total-count">Tổng số ký tự<input id="total-count" name="total_count" type="number" inputmode="numeric" min="1" max="60" step="1" value="7" required><span>Không tính khoảng trắng</span></label>
+                <label for="first-count">Số ký tự tiếng thứ nhất<input id="first-count" name="first_count" type="number" inputmode="numeric" min="1" max="59" step="1" placeholder="Không bắt buộc" aria-describedby="first-count-hint"><span id="first-count-hint">Để trống nếu chưa biết</span></label>
                 <button class="primary" id="search-button" type="submit">Tìm từ <span aria-hidden="true">↗</span></button>
             </div>
         </form>

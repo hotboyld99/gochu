@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="vi">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#f5f4ef" />
+        <title>Gỡ chữ — Một từ, sáu cơ hội</title>
+        <link rel="stylesheet" href="game.css" />
+        <script src="words-data.js" defer></script>
+    </head>
+    <body>
+        <main class="app">
+            <section class="intro">
+                <p class="eyebrow">THỬ THÁCH ĐOÁN TỪ</p>
+            </section>
+            <div id="storage-notice" class="storage-notice" role="status" hidden></div>
+            <section class="stats" aria-label="Bảng điểm">
+                <div class="stat"><strong id="stat-played">0</strong><span>Ván đã hoàn thành</span></div>
+                <div class="stat"><strong id="stat-won">0</strong><span>Đoán đúng</span></div>
+                <div class="stat"><strong id="stat-rate">0%</strong><span>Tỉ lệ đúng</span></div>
+                <div class="stat"><strong id="stat-streak">0</strong><span>Chuỗi đúng hiện tại</span></div>
+            </section>
+            <div class="layout">
+                <section class="panel game-panel" aria-labelledby="game-heading">
+                    <div class="panel-heading">
+                        <h2 id="game-heading">Từ bí mật của bạn</h2>
+                        <span id="round-tag" class="tag">6 lượt đoán</span>
+                    </div>
+                    <p id="word-meta" class="word-meta">Đang chuẩn bị từ…</p>
+                    <p id="fatal" class="fatal" role="alert" hidden></p>
+                    <div
+                        class="board-scroll"
+                        tabindex="0"
+                        role="region"
+                        aria-label="Bảng 6 lượt đoán, cuộn ngang nếu từ dài"
+                    >
+                        <div id="board" class="board"></div>
+                    </div>
+                    <p id="scroll-hint" class="scroll-hint">Với từ dài, cuộn ngang để xem đủ các ô.</p>
+                    <form id="guess-form" class="guess-form" novalidate>
+                        <label class="input-label" for="guess-input"
+                            ><span id="guess-label">Lượt đoán 1 / 6</span><span id="input-count">0 ký tự</span></label
+                        >
+                        <div class="input-row">
+                            <input
+                                id="guess-input"
+                                class="guess-input"
+                                type="text"
+                                autocomplete="off"
+                                autocapitalize="none"
+                                spellcheck="false"
+                                placeholder="Nhập từ bạn nghĩ đến…"
+                                aria-describedby="input-help guess-message"
+                            /><button id="guess-button" class="primary" type="submit">Đoán từ ↵</button>
+                        </div>
+                        <div id="virtual-keyboard" class="virtual-keyboard" role="group" aria-label="Bàn phím đoán từ" aria-describedby="keyboard-help"></div>
+                        <p id="keyboard-help" class="keyboard-help">Phím dấu đổi nguyên âm được chọn hoặc nguyên âm gần nhất trước con trỏ trong tiếng đang gõ.</p>
+                        <p id="input-help" class="help">
+                            Gõ cả từ bằng bộ gõ tiếng Việt. Không tính khoảng trắng; chữ có dấu là một ký tự.
+                        </p>
+                        <p id="guess-message" class="message" role="status" hidden></p>
+                    </form>
+                    <div id="result" class="result" role="status" hidden>
+                        <h3 id="result-title"></h3>
+                        <p id="result-description"></p>
+                        <strong id="answer" class="answer"></strong
+                        ><button id="next-game" class="primary" type="button">Chơi từ tiếp theo →</button>
+                    </div>
+                    <p id="exhausted" class="exhausted" hidden></p>
+                    <p id="remaining" class="remaining"></p>
+                </section>
+                <aside class="side">
+                    <section class="panel" aria-labelledby="rules-heading">
+                        <h2 id="rules-heading">Mỗi màu là một gợi ý</h2>
+                        <ul class="legend">
+                            <li>
+                                <span class="swatch exact" aria-hidden="true">Á</span>
+                                <div>
+                                    <strong>Xanh lá · Đúng hoàn toàn</strong
+                                    ><small>Đúng chữ, đúng dấu và đúng ô.</small>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="swatch present" aria-hidden="true">Á</span>
+                                <div>
+                                    <strong>Vàng · Đổi vị trí</strong
+                                    ><small>Đúng chữ và dấu, nhưng nằm ở ô khác.</small>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="swatch accent" aria-hidden="true">A</span>
+                                <div>
+                                    <strong>Xanh dương · Kiểm tra dấu</strong
+                                    ><small>Đúng chữ gốc, đúng ô; sai dấu hoặc mũ.</small>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="swatch absent" aria-hidden="true">B</span>
+                                <div>
+                                    <strong>Xám · Không khớp</strong
+                                    ><small>Chữ không có trong từ, hoặc đã dùng hết số lần xuất hiện.</small>
+                                </div>
+                            </li>
+                        </ul>
+                        <p class="help rule-note">
+                            Có 6 lượt cho mỗi từ, từ 7 ký tự trở lên. Ô đúng vị trí được ưu tiên trước ô vàng; mỗi chữ
+                            trong đáp án chỉ được tính một lần. D và Đ cùng được xét là chữ gốc D.
+                        </p>
+                    </section>
+                    <section class="panel" aria-labelledby="history-heading">
+                        <div class="panel-heading">
+                            <h2 id="history-heading">Những từ đã đi qua</h2>
+                            <span id="history-count" class="tag">0 ván</span>
+                        </div>
+                        <p id="history-empty" class="history-empty">
+                            Hoàn thành ván đầu tiên để bắt đầu hành trình của bạn.
+                        </p>
+                        <div id="history-list" class="history-list"></div>
+                        <button id="more-history" class="text-button" type="button" hidden>Xem thêm lịch sử</button>
+                    </section>
+                </aside>
+            </div>
+            <footer>
+                Lịch sử lưu trên trình duyệt này · Tải lại trang để tiếp tục ván đang chơi · Mỗi từ chỉ xuất hiện một
+                lần
+            </footer>
+        </main>
+        <script>
+            "use strict";
+            // Data is loaded by a deferred script; initialize after it has finished.
+            const STORAGE_KEY = "go-chu-game-v1";
+            const MAX_GUESSES = 6;
+            const segmenter =
+                typeof Intl.Segmenter === "function" ? new Intl.Segmenter("vi", { granularity: "grapheme" }) : null;
+            const normalize = (text) => text.normalize("NFC").toLocaleLowerCase("vi").trim().replace(/\s+/gu, " ");
+            const lettersOf = (text) => {
+                const compact = normalize(text).replace(/\s/gu, "");
+                return segmenter ? Array.from(segmenter.segment(compact), (part) => part.segment) : Array.from(compact);
+            };
+            const baseLetter = (letter) => letter.normalize("NFD").replace(/\p{M}/gu, "").replace(/đ/g, "d");
+            const keyOf = (text) => normalize(text).replace(/\s/gu, "");
+            const formatNumber = (number) => number.toLocaleString("vi-VN");
+            const $ = (selector) => document.querySelector(selector);
+            const colorNames = {
+                exact: "xanh lá, đúng hoàn toàn",
+                accent: "xanh dương, đúng ô nhưng sai dấu hoặc mũ",
+                present: "vàng, đúng chữ nhưng sai ô",
+                absent: "xám, không khớp",
+            };
+            let state = { version: 1, used: [], history: [], active: null };
+            let pool = [];
+            let storageAvailable = true;
+            let historyLimit = 8;
+            let composing = false;
+            let ready = false;
+
+            function scoreGuess(guess, answer) {
+                const target = lettersOf(answer);
+                const typed = lettersOf(guess);
+                const result = typed.map(() => "absent");
+                const used = new Set();
+                // Reserve exact letters, then same-position base letters, before distributing yellow letters.
+                typed.forEach((letter, index) => {
+                    if (letter === target[index]) {
+                        result[index] = "exact";
+                        used.add(index);
+                    }
+                });
+                typed.forEach((letter, index) => {
+                    if (
+                        result[index] === "absent" &&
+                        target[index] &&
+                        baseLetter(letter) === baseLetter(target[index])
+                    ) {
+                        result[index] = "accent";
+                        used.add(index);
+                    }
+                });
+                typed.forEach((letter, index) => {
+                    if (result[index] !== "absent") return;
+                    const match = target.findIndex(
+                        (candidate, targetIndex) => !used.has(targetIndex) && candidate === letter,
+                    );
+                    if (match !== -1) {
+                        result[index] = "present";
+                        used.add(match);
+                    }
+                });
+                return result;
+            }
+
+            function outcome(round) {
+                if (round.guesses.some((guess) => keyOf(guess) === keyOf(round.answer))) return "won";
+                return round.guesses.length >= MAX_GUESSES ? "lost" : "playing";
+            }
+
+            function isValidRound(round) {
+                if (
+                    !round ||
+                    typeof round.id !== "string" ||
+                    typeof round.answer !== "string" ||
+                    typeof round.startedAt !== "string" ||
+                    !Array.isArray(round.guesses)
+                )
+                    return false;
+                const length = lettersOf(round.answer).length;
+                if (
+                    length < 7 ||
+                    !/^[\p{L}\p{M}]+(?:\s+[\p{L}\p{M}]+)+$/u.test(round.answer) ||
+                    round.guesses.length > MAX_GUESSES
+                )
+                    return false;
+                return (
+                    round.guesses.every(
+                        (guess, index) =>
+                            typeof guess === "string" &&
+                            /^[\p{L}\p{M}\s]+$/u.test(guess) &&
+                            lettersOf(guess).length === length &&
+                            (index === round.guesses.length - 1 || keyOf(guess) !== keyOf(round.answer)),
+                    ) &&
+                    (round.draft === undefined || typeof round.draft === "string")
+                );
+            }
+
+            function validateState(saved) {
+                if (
+                    !saved ||
+                    saved.version !== 1 ||
+                    !Array.isArray(saved.used) ||
+                    !saved.used.every((key) => typeof key === "string") ||
+                    !Array.isArray(saved.history)
+                )
+                    throw new Error("Invalid history");
+                if (
+                    !saved.history.every(
+                        (round) =>
+                            isValidRound(round) &&
+                            outcome(round) !== "playing" &&
+                            typeof round.completedAt === "string" &&
+                            Number.isFinite(Date.parse(round.completedAt)),
+                    )
+                )
+                    throw new Error("Invalid completed round");
+                if (saved.active !== null && !isValidRound(saved.active)) throw new Error("Invalid active round");
+                const ids = new Set(saved.history.map((round) => round.id));
+                if (ids.size !== saved.history.length) throw new Error("Duplicate history");
+                // Rebuild the exclusion list from history as well, so older records cannot be drawn again.
+                saved.used = [
+                    ...new Set([
+                        ...saved.used,
+                        ...saved.history.map((round) => keyOf(round.answer)),
+                        ...(saved.active ? [keyOf(saved.active.answer)] : []),
+                    ]),
+                ];
+                return saved;
+            }
+
+            function storageNotice(message) {
+                $("#storage-notice").textContent = message;
+                $("#storage-notice").hidden = false;
+            }
+
+            function loadState() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    if (raw) state = validateState(JSON.parse(raw));
+                } catch (error) {
+                    storageAvailable = false;
+                    storageNotice(
+                        "Không đọc được lịch sử đã lưu. Game vẫn chơi được trong phiên này, nhưng không thể lưu tiến độ hoặc bảo đảm tránh từ cũ sau khi đóng trang. Dữ liệu cũ được giữ nguyên.",
+                    );
+                }
+            }
+
+            function saveState() {
+                if (!storageAvailable) return;
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                } catch (error) {
+                    storageAvailable = false;
+                    storageNotice(
+                        "Trình duyệt không cho phép lưu hoặc đã hết dung lượng. Tiến độ mới chỉ được giữ trong phiên này; hãy giữ trang mở để tiếp tục.",
+                    );
+                }
+            }
+
+            function showMessage(message) {
+                $("#guess-message").textContent = message;
+                $("#guess-message").hidden = !message;
+            }
+
+            function finishRound() {
+                const round = state.active;
+                if (!round || outcome(round) === "playing" || state.history.some((item) => item.id === round.id))
+                    return;
+                state.history.push({
+                    id: round.id,
+                    answer: round.answer,
+                    guesses: [...round.guesses],
+                    startedAt: round.startedAt,
+                    completedAt: new Date().toISOString(),
+                });
+            }
+
+            function availableWords() {
+                const used = new Set(state.used);
+                return pool.filter((word) => !used.has(keyOf(word)));
+            }
+
+            function newRound() {
+                if (state.active && outcome(state.active) === "playing") return;
+                const available = availableWords();
+                if (!available.length) {
+                    render();
+                    return;
+                }
+                const random = new Uint32Array(1);
+                crypto.getRandomValues(random);
+                const answer = available[Math.floor((random[0] / 4294967296) * available.length)];
+                state.active = {
+                    id: `${Date.now()}-${random[0]}`,
+                    answer,
+                    guesses: [],
+                    draft: "",
+                    startedAt: new Date().toISOString(),
+                };
+                state.used.push(keyOf(answer));
+                saveState();
+                showMessage("");
+                render();
+            }
+
+            function renderStats() {
+                const played = state.history.length;
+                const won = state.history.filter((round) => outcome(round) === "won").length;
+                let streak = 0;
+                for (let i = played - 1; i >= 0 && outcome(state.history[i]) === "won"; i--) streak++;
+                $("#stat-played").textContent = formatNumber(played);
+                $("#stat-won").textContent = formatNumber(won);
+                $("#stat-rate").textContent =
+                    `${played ? ((won / played) * 100).toLocaleString("vi-VN", { maximumFractionDigits: 1 }) : "0"}%`;
+                $("#stat-streak").textContent = formatNumber(streak);
+            }
+
+            function renderHistory() {
+                const list = $("#history-list");
+                list.replaceChildren();
+                $("#history-count").textContent = `${formatNumber(state.history.length)} ván`;
+                $("#history-empty").hidden = state.history.length > 0;
+                const dateFormat = new Intl.DateTimeFormat("vi-VN", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    timeZone: "Asia/Ho_Chi_Minh",
+                });
+                state.history
+                    .slice(-historyLimit)
+                    .reverse()
+                    .forEach((round) => {
+                        const entry = document.createElement("details");
+                        entry.className = "history-entry";
+                        const summary = document.createElement("summary");
+                        const title = document.createElement("strong");
+                        title.textContent = round.answer;
+                        const result = document.createElement("span");
+                        const status = outcome(round);
+                        result.className = `outcome ${status}`;
+                        result.textContent = `${status === "won" ? "Đúng" : "Chưa đúng"} · ${round.guesses.length}/6`;
+                        summary.append(title, result);
+                        const date = document.createElement("p");
+                        date.className = "history-date";
+                        date.textContent = dateFormat.format(new Date(round.completedAt));
+                        const guesses = document.createElement("ol");
+                        guesses.className = "history-guesses";
+                        round.guesses.forEach((guess) => {
+                            const item = document.createElement("li");
+                            item.textContent = guess;
+                            guesses.append(item);
+                        });
+                        entry.append(summary, date, guesses);
+                        list.append(entry);
+                    });
+                $("#more-history").hidden = state.history.length <= historyLimit;
+            }
+
+            function renderBoard() {
+                const board = $("#board");
+                board.replaceChildren();
+                const round = state.active;
+                if (!round) return;
+                const target = lettersOf(round.answer);
+                const boundaries = new Set();
+                let offset = 0;
+                normalize(round.answer)
+                    .split(" ")
+                    .slice(0, -1)
+                    .forEach((part) => {
+                        offset += lettersOf(part).length;
+                        boundaries.add(offset);
+                    });
+                const playing = outcome(round) === "playing";
+                for (let attempt = 0; attempt < MAX_GUESSES; attempt++) {
+                    const guess = round.guesses[attempt];
+                    const current = playing && attempt === round.guesses.length;
+                    const letters = lettersOf(guess ?? (current ? round.draft || "" : ""));
+                    const colors = guess ? scoreGuess(guess, round.answer) : [];
+                    const row = document.createElement("div");
+                    row.className = `guess-row${current ? " current" : ""}`;
+                    row.setAttribute("role", "group");
+                    row.setAttribute("aria-label", `Lượt ${attempt + 1}${current ? ", đang nhập" : ""}`);
+                    const label = document.createElement("span");
+                    label.className = "row-number";
+                    label.textContent = String(attempt + 1).padStart(2, "0");
+                    label.setAttribute("aria-hidden", "true");
+                    row.append(label);
+                    target.forEach((_, index) => {
+                        const tile = document.createElement("span");
+                        tile.className = `tile${boundaries.has(index) ? " word-start" : ""}${colors[index] ? ` ${colors[index]}` : letters[index] ? " typed" : ""}`;
+                        tile.textContent = letters[index] || "";
+                        tile.setAttribute(
+                            "aria-label",
+                            `Ô ${index + 1}: ${letters[index] || "trống"}${colors[index] ? `, ${colorNames[colors[index]]}` : ""}`,
+                        );
+                        row.append(tile);
+                    });
+                    board.append(row);
+                }
+            }
+
+            function buildKeyboard() {
+                const rows = [
+                    [..."qwertyuiop"],
+                    [..."asdfghjkl"],
+                    ["enter", ..."zxcvbnm", "backspace"],
+                    [..."ăâêôơưđ", "space"],
+                    ["tone-acute", "tone-grave", "tone-hook", "tone-tilde", "tone-dot", "tone-none"],
+                ];
+                const labels = {
+                    enter: ["Enter", "Gửi lượt đoán"], backspace: ["⌫", "Xóa ký tự trước con trỏ"],
+                    space: ["Cách", "Dấu cách"], "tone-acute": ["Sắc", "Dấu sắc"],
+                    "tone-grave": ["Huyền", "Dấu huyền"], "tone-hook": ["Hỏi", "Dấu hỏi"],
+                    "tone-tilde": ["Ngã", "Dấu ngã"], "tone-dot": ["Nặng", "Dấu nặng"],
+                    "tone-none": ["Ngang", "Bỏ dấu thanh, giữ nguyên mũ"],
+                };
+                const keyboard = $("#virtual-keyboard");
+                rows.forEach((keys, index) => {
+                    const row = document.createElement("div");
+                    row.className = `keyboard-row keyboard-row-${index + 1}`;
+                    keys.forEach(key => {
+                        const button = document.createElement("button");
+                        button.type = "button";
+                        button.dataset.key = key;
+                        button.className = `keyboard-key${labels[key] ? " keyboard-action" : ""}${key.startsWith("tone-") ? " keyboard-tone" : ""}`;
+                        button.textContent = labels[key]?.[0] || key.toLocaleUpperCase("vi");
+                        button.dataset.label = labels[key]?.[1] || `Chữ ${key.toLocaleUpperCase("vi")}`;
+                        button.setAttribute("aria-label", button.dataset.label);
+                        row.append(button);
+                    });
+                    keyboard.append(row);
+                });
+                // Keep the input selection when tapping a key; keyboard navigation still uses normal buttons.
+                keyboard.addEventListener("pointerdown", event => {
+                    if (event.target.closest("button")) event.preventDefault();
+                });
+                keyboard.addEventListener("click", event => {
+                    const button = event.target.closest("button[data-key]");
+                    if (button && !button.disabled) pressVirtualKey(button.dataset.key);
+                });
+            }
+
+            function renderKeyboard() {
+                const round = state.active;
+                const colors = new Map();
+                const rank = { absent: 1, present: 2, accent: 3, exact: 4 };
+                if (round) round.guesses.forEach(guess => {
+                    const scores = scoreGuess(guess, round.answer);
+                    lettersOf(guess).forEach((letter, index) => {
+                        if ((rank[colors.get(letter)] || 0) < rank[scores[index]]) colors.set(letter, scores[index]);
+                    });
+                });
+                $("#virtual-keyboard").querySelectorAll("button").forEach(button => {
+                    const color = colors.get(button.dataset.key);
+                    for (const name of Object.keys(rank)) button.classList.toggle(name, color === name);
+                    button.disabled = !ready || !round || outcome(round) !== "playing";
+                    button.setAttribute("aria-label", `${button.dataset.label}${color ? `, ${colorNames[color]}` : ""}`);
+                });
+            }
+
+            function rawSegments(text) {
+                if (segmenter) return Array.from(segmenter.segment(text), part => ({ text: part.segment, index: part.index }));
+                return Array.from(text.matchAll(/\P{M}\p{M}*|\p{M}+/gu), match => ({ text: match[0], index: match.index }));
+            }
+
+            function pressVirtualKey(key) {
+                if (!ready || composing || !state.active || outcome(state.active) !== "playing") return;
+                const input = $("#guess-input");
+                if (key === "enter") { $("#guess-form").requestSubmit(); return; }
+                let start = input.selectionStart ?? input.value.length;
+                let end = input.selectionEnd ?? start;
+                const originalStart = start;
+                const originalEnd = end;
+                let caretAfterTone = null;
+                let replacement = key;
+                if (key === "backspace") {
+                    replacement = "";
+                    if (start === end && start > 0) start = rawSegments(input.value.slice(0, start)).at(-1).index;
+                } else if (key === "space") {
+                    replacement = " ";
+                } else if (key.startsWith("tone-")) {
+                    const marks = { "tone-acute": "\u0301", "tone-grave": "\u0300", "tone-hook": "\u0309", "tone-tilde": "\u0303", "tone-dot": "\u0323", "tone-none": "" };
+                    if (start === end) {
+                        const previous = rawSegments(input.value.slice(0, start));
+                        for (let i = previous.length - 1; i >= 0; i--) {
+                            const part = previous[i];
+                            if (/\s/u.test(part.text)) break;
+                            if (/^[aeiouy]$/u.test(baseLetter(part.text.toLocaleLowerCase("vi")))) {
+                                start = part.index; end = start + part.text.length; break;
+                            }
+                        }
+                    }
+                    const vowel = input.value.slice(start, end);
+                    if (!/^[aeiouy]$/u.test(baseLetter(vowel.toLocaleLowerCase("vi")))) {
+                        showMessage("Hãy chọn một nguyên âm hoặc đặt con trỏ sau nguyên âm cần đổi dấu.");
+                        return;
+                    }
+                    replacement = (vowel.normalize("NFD").replace(/[\u0300\u0301\u0303\u0309\u0323]/gu, "") + marks[key]).normalize("NFC");
+                    if (originalStart === originalEnd) caretAfterTone = originalEnd + replacement.length - (end - start);
+                }
+                input.setRangeText(replacement, start, end, "end");
+                if (caretAfterTone !== null) input.setSelectionRange(caretAfterTone, caretAfterTone);
+                // Tone changes keep the caret after any final consonants.
+                input.focus({ preventScroll: true });
+                updateDraft();
+            }
+
+            function render() {
+                renderStats();
+                renderHistory();
+                renderBoard();
+                renderKeyboard();
+                const round = state.active;
+                const remaining = availableWords().length;
+                $("#remaining").textContent = `${formatNumber(remaining)} từ chưa chơi · Không lặp lại đáp án cũ`;
+                $("#exhausted").hidden = remaining > 0;
+                $("#exhausted").textContent =
+                    round && outcome(round) === "playing"
+                        ? "Đây là từ cuối cùng chưa chơi trong bộ dữ liệu."
+                        : "Bạn đã chơi hết bộ từ hiện có. Lịch sử được giữ lại; thêm từ mới vào dữ liệu để tiếp tục.";
+                $("#guess-form").hidden = !round;
+                $("#scroll-hint").hidden = !round;
+                $("#result").hidden = !round || outcome(round) === "playing";
+                if (!round) {
+                    $("#word-meta").textContent = "Không còn từ mới để bắt đầu.";
+                    return;
+                }
+                const length = lettersOf(round.answer).length;
+                const status = outcome(round);
+                const playing = status === "playing";
+                $("#word-meta").textContent = `${length} ký tự · ${normalize(round.answer)
+                    .split(" ")
+                    .map((part) => lettersOf(part).length)
+                    .join(" + ")} · Không tính khoảng trắng`;
+                $("#round-tag").textContent = playing
+                    ? `Còn ${MAX_GUESSES - round.guesses.length} lượt`
+                    : status === "won"
+                      ? "Đoán đúng"
+                      : "Đã hết lượt";
+                $("#guess-label").textContent = playing
+                    ? `Lượt đoán ${round.guesses.length + 1} / 6`
+                    : "Ván chơi đã hoàn thành";
+                $("#guess-input").value = round.draft || "";
+                $("#guess-input").disabled = !playing;
+                $("#guess-button").disabled = !playing;
+                $("#guess-input").placeholder = `Nhập ${length} ký tự…`;
+                $("#input-count").textContent = `${lettersOf(round.draft || "").length} / ${length} ký tự`;
+                if (!playing) {
+                    $("#result").classList.toggle("lost", status === "lost");
+                    $("#result-title").textContent = status === "won" ? "Bạn đã tìm ra từ!" : "Hết 6 lượt rồi!";
+                    $("#result-description").textContent =
+                        status === "won"
+                            ? `Chính xác ở lượt ${round.guesses.length}/6. Đáp án là:`
+                            : "Một từ mới đang chờ ở ván sau. Đáp án của ván này là:";
+                    $("#answer").textContent = round.answer;
+                    $("#next-game").hidden = remaining === 0;
+                }
+            }
+
+            function submitGuess(event) {
+                event.preventDefault();
+                if (!ready || composing || !state.active || outcome(state.active) !== "playing") return;
+                const round = state.active;
+                const guess = normalize($("#guess-input").value);
+                const length = lettersOf(round.answer).length;
+                if (!guess || !/^[\p{L}\p{M}\s]+$/u.test(guess)) {
+                    showMessage("Chỉ nhập chữ cái tiếng Việt hoặc chữ cái Latin, không nhập số hay ký hiệu.");
+                    return;
+                }
+                if (lettersOf(guess).length !== length) {
+                    showMessage(`Cần đúng ${length} ký tự, không tính khoảng trắng. Lượt này chưa bị trừ.`);
+                    return;
+                }
+                if (round.guesses.some((previous) => keyOf(previous) === keyOf(guess))) {
+                    showMessage("Bạn đã thử từ này rồi. Hãy thử một cách đoán khác; lượt chưa bị trừ.");
+                    return;
+                }
+                round.guesses.push(guess);
+                round.draft = "";
+                finishRound();
+                saveState();
+                render();
+                showMessage(
+                    outcome(round) === "playing"
+                        ? `Đã ghi nhận lượt ${round.guesses.length}. Xem màu từng ô để đoán tiếp.`
+                        : "",
+                );
+                if (outcome(round) === "playing") $("#guess-input").focus();
+                else if (!$("#next-game").hidden) $("#next-game").focus();
+            }
+
+            function updateDraft() {
+                if (!ready || !state.active || outcome(state.active) !== "playing") return;
+                state.active.draft = $("#guess-input").value;
+                $("#input-count").textContent =
+                    `${lettersOf(state.active.draft).length} / ${lettersOf(state.active.answer).length} ký tự`;
+                showMessage("");
+                renderBoard();
+                saveState();
+            }
+
+            function initialize() {
+                try {
+                    if (!Array.isArray(window.WORDS_DATA?.words))
+                        throw new Error(
+                            "Không đọc được words-data.js. Hãy đặt file này cùng thư mục với game.html rồi tải lại trang.",
+                        );
+                    const unique = new Map();
+                    window.WORDS_DATA.words.forEach((row) => {
+                        if (typeof row.text !== "string") return;
+                        const text = normalize(row.text);
+                        if (!/^[\p{L}\p{M}]+(?: [\p{L}\p{M}]+)+$/u.test(text) || lettersOf(text).length < 7) return;
+                        if (!unique.has(keyOf(text))) unique.set(keyOf(text), text);
+                    });
+                    pool = [...unique.values()];
+                    if (!pool.length) throw new Error("Dữ liệu chưa có từ hợp lệ từ 7 ký tự trở lên.");
+                    loadState();
+                    ready = true;
+                    if (!state.active) newRound();
+                    else {
+                        finishRound();
+                        saveState();
+                        render();
+                    }
+                } catch (error) {
+                    $("#fatal").textContent = error.message;
+                    $("#fatal").hidden = false;
+                    $("#word-meta").textContent = "Chưa thể bắt đầu ván chơi.";
+                    $("#guess-form").hidden = true;
+                    $("#scroll-hint").hidden = true;
+                }
+            }
+
+            $("#guess-form").addEventListener("submit", submitGuess);
+            $("#guess-input").addEventListener("compositionstart", () => {
+                composing = true;
+            });
+            $("#guess-input").addEventListener("compositionend", () => {
+                composing = false;
+                updateDraft();
+            });
+            $("#guess-input").addEventListener("input", (event) => {
+                if (!event.isComposing) updateDraft();
+            });
+            $("#guess-input").addEventListener("keydown", (event) => {
+                if (event.key === "Enter" && (event.isComposing || composing || event.keyCode === 229))
+                    event.preventDefault();
+            });
+            $("#next-game").addEventListener("click", () => {
+                newRound();
+                $("#guess-input").focus();
+            });
+            $("#more-history").addEventListener("click", () => {
+                historyLimit += 8;
+                renderHistory();
+            });
+            window.addEventListener("storage", (event) => {
+                if (!ready || !storageAvailable || event.key !== STORAGE_KEY || !event.newValue) return;
+                try {
+                    state = validateState(JSON.parse(event.newValue));
+                    render();
+                    showMessage("Ván chơi đã được đồng bộ từ tab khác.");
+                } catch (error) {
+                    storageNotice("Không thể đồng bộ dữ liệu từ tab khác. Hãy tải lại trang trước khi tiếp tục.");
+                    ready = false;
+                }
+            });
+            buildKeyboard();
+            renderKeyboard();
+            document.addEventListener("DOMContentLoaded", initialize);
+        </script>
+    </body>
+</html>
