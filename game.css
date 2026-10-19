@@ -46,7 +46,7 @@ summary:focus-visible {
     outline-offset: 4px;
 }
 .app {
-    max-width: 1180px;
+    max-width: 780px;
     margin: auto;
     padding: 34px 26px 40px;
 }
@@ -134,7 +134,7 @@ h1 span {
 }
 .layout {
     display: grid;
-    grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 22px;
     align-items: start;
 }

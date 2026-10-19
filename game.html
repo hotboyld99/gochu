@@ -69,56 +69,6 @@
                     <p id="exhausted" class="exhausted" hidden></p>
                     <p id="remaining" class="remaining"></p>
                 </section>
-                <aside class="side">
-                    <section class="panel" aria-labelledby="rules-heading">
-                        <h2 id="rules-heading">Mỗi màu là một gợi ý</h2>
-                        <ul class="legend">
-                            <li>
-                                <span class="swatch exact" aria-hidden="true">Á</span>
-                                <div>
-                                    <strong>Xanh lá · Đúng hoàn toàn</strong
-                                    ><small>Đúng chữ, đúng dấu và đúng ô.</small>
-                                </div>
-                            </li>
-                            <li>
-                                <span class="swatch present" aria-hidden="true">Á</span>
-                                <div>
-                                    <strong>Vàng · Đổi vị trí</strong
-                                    ><small>Đúng chữ và dấu, nhưng nằm ở ô khác.</small>
-                                </div>
-                            </li>
-                            <li>
-                                <span class="swatch accent" aria-hidden="true">A</span>
-                                <div>
-                                    <strong>Xanh dương · Kiểm tra dấu</strong
-                                    ><small>Đúng chữ gốc, đúng ô; sai dấu hoặc mũ.</small>
-                                </div>
-                            </li>
-                            <li>
-                                <span class="swatch absent" aria-hidden="true">B</span>
-                                <div>
-                                    <strong>Xám · Không khớp</strong
-                                    ><small>Chữ không có trong từ, hoặc đã dùng hết số lần xuất hiện.</small>
-                                </div>
-                            </li>
-                        </ul>
-                        <p class="help rule-note">
-                            Có 6 lượt cho mỗi từ, từ 7 ký tự trở lên. Ô đúng vị trí được ưu tiên trước ô vàng; mỗi chữ
-                            trong đáp án chỉ được tính một lần. D và Đ cùng được xét là chữ gốc D.
-                        </p>
-                    </section>
-                    <section class="panel" aria-labelledby="history-heading">
-                        <div class="panel-heading">
-                            <h2 id="history-heading">Những từ đã đi qua</h2>
-                            <span id="history-count" class="tag">0 ván</span>
-                        </div>
-                        <p id="history-empty" class="history-empty">
-                            Hoàn thành ván đầu tiên để bắt đầu hành trình của bạn.
-                        </p>
-                        <div id="history-list" class="history-list"></div>
-                        <button id="more-history" class="text-button" type="button" hidden>Xem thêm lịch sử</button>
-                    </section>
-                </aside>
             </div>
             <footer>
                 Lịch sử lưu trên trình duyệt này · Tải lại trang để tiếp tục ván đang chơi · Mỗi từ chỉ xuất hiện một
@@ -151,7 +101,6 @@
             let pool = [];
             const dictionary = new Set();
             let storageAvailable = true;
-            let historyLimit = 8;
             let composing = false;
             let ready = false;
 
@@ -343,49 +292,6 @@
                 $("#stat-streak").textContent = formatNumber(streak);
             }
 
-            function renderHistory() {
-                const list = $("#history-list");
-                list.replaceChildren();
-                $("#history-count").textContent = `${formatNumber(state.history.length)} ván`;
-                $("#history-empty").hidden = state.history.length > 0;
-                const dateFormat = new Intl.DateTimeFormat("vi-VN", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    timeZone: "Asia/Ho_Chi_Minh",
-                });
-                state.history
-                    .slice(-historyLimit)
-                    .reverse()
-                    .forEach((round) => {
-                        const entry = document.createElement("details");
-                        entry.className = "history-entry";
-                        const summary = document.createElement("summary");
-                        const title = document.createElement("strong");
-                        title.textContent = round.answer;
-                        const result = document.createElement("span");
-                        const status = outcome(round);
-                        result.className = `outcome ${status}`;
-                        result.textContent = `${status === "won" ? "Đúng" : "Chưa đúng"} · ${round.guesses.length}/6`;
-                        summary.append(title, result);
-                        const date = document.createElement("p");
-                        date.className = "history-date";
-                        date.textContent = dateFormat.format(new Date(round.completedAt));
-                        const guesses = document.createElement("ol");
-                        guesses.className = "history-guesses";
-                        round.guesses.forEach((guess) => {
-                            const item = document.createElement("li");
-                            item.textContent = guess;
-                            guesses.append(item);
-                        });
-                        entry.append(summary, date, guesses);
-                        list.append(entry);
-                    });
-                $("#more-history").hidden = state.history.length <= historyLimit;
-            }
-
             function renderBoard() {
                 const board = $("#board");
                 board.replaceChildren();
@@ -538,7 +444,6 @@
 
             function render() {
                 renderStats();
-                renderHistory();
                 renderBoard();
                 renderKeyboard();
                 const round = state.active;
@@ -686,10 +591,6 @@
             $("#next-game").addEventListener("click", () => {
                 newRound();
                 $("#guess-input").focus();
-            });
-            $("#more-history").addEventListener("click", () => {
-                historyLimit += 8;
-                renderHistory();
             });
             window.addEventListener("storage", (event) => {
                 if (!ready || !storageAvailable || event.key !== STORAGE_KEY || !event.newValue) return;
