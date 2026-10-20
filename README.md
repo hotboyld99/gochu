@@ -59,3 +59,9 @@ Lịch sử thuộc trình duyệt/địa chỉ mở trang hiện tại; xóa d�
 Bàn phím ảo dưới ô đoán gồm QWERTY, các chữ `ă â ê ô ơ ư đ`, phím dấu thanh, dấu cách, xóa và Enter. Phím dấu áp dụng cho nguyên âm được chọn hoặc nguyên âm gần nhất trước con trỏ trong tiếng đang gõ. Màu phím tổng hợp các lượt đã thử, ưu tiên xanh lá > xanh dương > vàng > xám; màu chỉ áp dụng cho đúng ký tự trên phím. Ván mới xóa màu, tải lại trang khôi phục màu từ lịch sử lượt đoán.
 
 Mỗi lượt mới phải khớp **toàn bộ gợi ý của tất cả lượt trước**: giữ nguyên chữ xanh lá đúng ô; giữ chữ gốc ở ô xanh dương nhưng đổi dấu/mũ đã thử; chữ vàng phải xuất hiện đủ số lần ở vị trí khác; chữ xám ràng buộc các chữ đã loại và số lần lặp. Game kiểm tra bằng cách chấm lại các lượt cũ với từ mới như một đáp án giả định: mọi ô phải cho cùng màu đã biết. Vì vậy chữ lặp và biến thể dấu vẫn được xử lý nhất quán. Từ vi phạm sẽ báo cụ thể gợi ý không khớp, không bị trừ lượt; tải lại trang vẫn áp dụng các gợi ý đã lưu.
+
+## Bản tối giản
+
+Mở `index-simple.html` cùng thư mục với `words-data.js`: không dùng CSS, chỉ có ô nhập, bộ lọc và kết quả. Giữ các chức năng tra theo tổng độ dài, độ dài tiếng đầu tùy chọn, vị trí ký tự, chữ có/không có, bỏ dấu và xem thêm.
+
+Trong cả `index.html` và `index-simple.html`, hàng **Đúng ô** cố định ký tự tại vị trí nhập. Hàng **Sai ô** yêu cầu chữ có trong từ nhưng không ở vị trí đó; có nút xóa riêng từng hàng (× ở bản tối giản). Nhập cùng chữ ở nhiều ô trong hàng Sai ô sẽ loại các vị trí đó, không bắt buộc tăng số lần xuất hiện của chữ. Cả hai hàng dùng chung bộ lọc Có/Không và tùy chọn Bỏ dấu.

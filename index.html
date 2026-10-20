@@ -1,64 +1,153 @@
 <!doctype html>
 <html lang="vi">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#f5f4ef">
-    <title>Gỡ chữ — Trợ lý đoán từ</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="words-data.js" defer></script>
-    <script src="app.js" defer></script>
-</head>
-<body>
-<main class="app">
-    <header class="heading">
-        <div class="brand"><span class="brand-icon" aria-hidden="true">g</span> GỠ CHỮ <span class="brand-tag">TRỢ LÝ ĐOÁN TỪ</span></div>
-    </header>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#f5f4ef" />
+        <title>Gỡ chữ — Trợ lý đoán từ</title>
+        <link rel="stylesheet" href="style.css" />
+        <script src="words-data.js" defer></script>
+        <script src="app.js" defer></script>
+    </head>
+    <body>
+        <main class="app">
+            <header class="heading">
+                <div class="brand">
+                    <span class="brand-icon" aria-hidden="true">g</span> GỠ CHỮ
+                    <span class="brand-tag">TRỢ LÝ ĐOÁN TỪ</span>
+                </div>
+            </header>
 
-    <section class="panel" aria-labelledby="length-heading">
-        <div class="section-title"><span class="step">01</span><h2 id="length-heading">Từ của bạn có bao nhiêu chữ?</h2></div>
-        <form id="search-form">
-            <div class="length-fields">
-                <label for="total-count">Tổng số ký tự<input id="total-count" name="total_count" type="number" inputmode="numeric" min="1" max="60" step="1" value="7" required><span>Không tính khoảng trắng</span></label>
-                <label for="first-count">Số ký tự tiếng thứ nhất<input id="first-count" name="first_count" type="number" inputmode="numeric" min="1" max="59" step="1" placeholder="Không bắt buộc" aria-describedby="first-count-hint"><span id="first-count-hint">Để trống nếu chưa biết</span></label>
-                <button class="primary" id="search-button" type="submit">Tìm từ <span aria-hidden="true">↗</span></button>
+            <section class="panel" aria-labelledby="length-heading">
+                <div class="section-title">
+                    <span class="step">01</span>
+                    <h2 id="length-heading">Từ của bạn có bao nhiêu chữ?</h2>
+                </div>
+                <form id="search-form">
+                    <div class="length-fields">
+                        <label for="total-count"
+                            >Tổng số ký tự<input
+                                id="total-count"
+                                name="total_count"
+                                type="number"
+                                inputmode="numeric"
+                                min="1"
+                                max="60"
+                                step="1"
+                                value="7"
+                                required
+                            /><span>Không tính khoảng trắng</span></label
+                        >
+                        <label for="first-count"
+                            >Số ký tự tiếng thứ nhất<input
+                                id="first-count"
+                                name="first_count"
+                                type="number"
+                                inputmode="numeric"
+                                min="1"
+                                max="59"
+                                step="1"
+                                placeholder="Không bắt buộc"
+                                aria-describedby="first-count-hint"
+                            /><span id="first-count-hint">Để trống nếu chưa biết</span></label
+                        >
+                        <button class="primary" id="search-button" type="submit">
+                            Tìm từ <span aria-hidden="true">↗</span>
+                        </button>
+                    </div>
+                </form>
+                <p class="hint">
+                    Không tính khoảng trắng; chữ có dấu tính là một ký tự. Ví dụ: “học sinh” có tổng 7 ký tự.
+                </p>
+                <p id="request-status" class="request-status" role="status" hidden></p>
+            </section>
+
+            <div id="filter-panel" class="filter-layout" hidden>
+                <section class="panel position-panel" aria-labelledby="filter-heading">
+                    <div class="section-title">
+                        <span class="step">02</span>
+                        <h2 id="filter-heading">Điền ký tự đã đúng</h2>
+                        <button id="clear-letters" class="text-button" type="button">Xóa vị trí</button>
+                    </div>
+                    <div id="letter-groups" class="letter-groups"></div>
+                    <div class="section-title misplaced-heading">
+                        <h3 id="misplaced-heading">Đúng chữ, sai vị trí</h3>
+                        <button id="clear-misplaced" class="text-button" type="button">Xóa sai ô</button>
+                    </div>
+                    <div
+                        id="misplaced-groups"
+                        class="letter-groups misplaced-groups"
+                        role="group"
+                        aria-labelledby="misplaced-heading"
+                        aria-describedby="misplaced-hint"
+                    ></div>
+                    <label class="checkbox"
+                        ><input type="checkbox" id="ignore-accents" />Bỏ qua dấu tiếng Việt
+                        <span>(a khớp á, à, ă, â…; d khớp đ)</span></label
+                    >
+                </section>
+
+                <section class="panel clue-panel" aria-labelledby="clue-heading">
+                    <div class="section-title">
+                        <h2 id="clue-heading">Loại dần theo ký tự</h2>
+                        <button id="clear-clues" class="text-button" type="button">Xóa bộ lọc</button>
+                    </div>
+                    <p id="clue-hint" class="hint filter-hint">
+                        Xét cả hai tiếng, không cần biết vị trí. Nhập liền hoặc cách nhau bằng dấu phẩy.
+                    </p>
+                    <label class="clue-field" for="required-letters"
+                        ><span class="clue-label"><span aria-hidden="true">＋</span> Ký tự đã đúng · Có trong từ</span>
+                        <input
+                            id="required-letters"
+                            type="text"
+                            placeholder="Ví dụ: h, c, n"
+                            autocomplete="off"
+                            autocapitalize="none"
+                            spellcheck="false"
+                            aria-describedby="clue-hint required-hint"
+                        />
+                        <span id="required-hint" class="clue-help"
+                            >Giữ từ có đủ tất cả các chữ này ở bất kỳ vị trí nào.</span
+                        >
+                    </label>
+                    <label class="clue-field excluded-field" for="excluded-letters"
+                        ><span class="clue-label"
+                            ><span aria-hidden="true">−</span> Ký tự đã sai · Không có trong từ</span
+                        >
+                        <input
+                            id="excluded-letters"
+                            type="text"
+                            placeholder="Ví dụ: b, đ, m"
+                            autocomplete="off"
+                            autocapitalize="none"
+                            spellcheck="false"
+                            aria-describedby="clue-hint excluded-hint"
+                        />
+                        <span id="excluded-hint" class="clue-help">Loại từ chứa bất kỳ chữ nào trong nhóm này.</span>
+                    </label>
+                    <p class="hint clue-note">
+                        Dùng chung tùy chọn “Bỏ qua dấu tiếng Việt”. Chữ lặp lại chỉ tính một lần.
+                    </p>
+                    <p id="clue-conflict" class="clue-conflict" role="status" hidden></p>
+                </section>
             </div>
-        </form>
-        <p class="hint">Không tính khoảng trắng; chữ có dấu tính là một ký tự. Ví dụ: “học sinh” có tổng 7 ký tự.</p>
-        <p id="request-status" class="request-status" role="status" hidden></p>
-    </section>
 
-    <div id="filter-panel" class="filter-layout" hidden>
-    <section class="panel position-panel" aria-labelledby="filter-heading">
-        <div class="section-title"><span class="step">02</span><h2 id="filter-heading">Điền ký tự đã đúng</h2><button id="clear-letters" class="text-button" type="button">Xóa vị trí</button></div>
-        <p class="hint filter-hint">Điền liên tiếp từ trái sang phải, bỏ qua khoảng trắng. Để trống ô chưa biết; dùng Tab hoặc ← → để chuyển ô.</p>
-        <div id="letter-groups" class="letter-groups"></div>
-        <label class="checkbox"><input type="checkbox" id="ignore-accents">Bỏ qua dấu tiếng Việt <span>(a khớp á, à, ă, â…; d khớp đ)</span></label>
-    </section>
-
-    <section class="panel clue-panel" aria-labelledby="clue-heading">
-        <div class="section-title"><h2 id="clue-heading">Loại dần theo ký tự</h2><button id="clear-clues" class="text-button" type="button">Xóa bộ lọc</button></div>
-        <p id="clue-hint" class="hint filter-hint">Xét cả hai tiếng, không cần biết vị trí. Nhập liền hoặc cách nhau bằng dấu phẩy.</p>
-        <label class="clue-field" for="required-letters"><span class="clue-label"><span aria-hidden="true">＋</span> Ký tự đã đúng · Có trong từ</span>
-            <input id="required-letters" type="text" placeholder="Ví dụ: h, c, n" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="clue-hint required-hint">
-            <span id="required-hint" class="clue-help">Giữ từ có đủ tất cả các chữ này ở bất kỳ vị trí nào.</span>
-        </label>
-        <label class="clue-field excluded-field" for="excluded-letters"><span class="clue-label"><span aria-hidden="true">−</span> Ký tự đã sai · Không có trong từ</span>
-            <input id="excluded-letters" type="text" placeholder="Ví dụ: b, đ, m" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="clue-hint excluded-hint">
-            <span id="excluded-hint" class="clue-help">Loại từ chứa bất kỳ chữ nào trong nhóm này.</span>
-        </label>
-        <p class="hint clue-note">Dùng chung tùy chọn “Bỏ qua dấu tiếng Việt”. Chữ lặp lại chỉ tính một lần.</p>
-        <p id="clue-conflict" class="clue-conflict" role="status" hidden></p>
-    </section>
-    </div>
-
-    <section class="results" aria-labelledby="results-heading">
-        <div class="results-header"><h2 id="results-heading">Các từ phù hợp <span id="result-count" class="badge">—</span></h2><span id="result-summary">Đang chờ gợi ý của bạn</span></div>
-        <div id="empty-state" class="empty-state"><span class="empty-icon" aria-hidden="true">a<span>?</span></span><h3>Bắt đầu từ độ dài</h3><p>Nhập tổng số ký tự rồi nhấn “Tìm từ”.</p></div>
-        <div id="word-list" class="word-list" hidden></div>
-        <button id="show-more" class="more-button" type="button" hidden>Xem thêm</button>
-    </section>
-    <footer>Mỗi ô là một ký tự <span>·</span> Lọc ngay khi nhập <span>·</span> Không phân biệt hoa thường</footer>
-</main>
-</body>
+            <section class="results" aria-labelledby="results-heading">
+                <div class="results-header">
+                    <h2 id="results-heading">Các từ phù hợp <span id="result-count" class="badge">—</span></h2>
+                    <span id="result-summary">Đang chờ gợi ý của bạn</span>
+                </div>
+                <div id="empty-state" class="empty-state">
+                    <span class="empty-icon" aria-hidden="true">a<span>?</span></span>
+                    <h3>Bắt đầu từ độ dài</h3>
+                    <p>Nhập tổng số ký tự rồi nhấn “Tìm từ”.</p>
+                </div>
+                <div id="word-list" class="word-list" hidden></div>
+                <button id="show-more" class="more-button" type="button" hidden>Xem thêm</button>
+            </section>
+            <footer>
+                Mỗi ô là một ký tự <span>·</span> Lọc ngay khi nhập <span>·</span> Không phân biệt hoa thường
+            </footer>
+        </main>
+    </body>
 </html>

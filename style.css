@@ -30,3 +30,10 @@
 .length-fields label>span{display:block}
 .length-fields input::placeholder{font-size:14px;font-weight:400;color:#96a193}
 @media(max-width:700px){.length-fields{grid-template-columns:minmax(0,1fr)}.length-fields .primary{margin-top:3px}}
+
+/* Letters present in the word but excluded from a specific position. */
+.misplaced-heading{border-top:1px solid #eef0eb;padding-top:16px}
+.misplaced-heading h3{font-size:13px;font-weight:600;margin:0;color:#806126}
+.misplaced-groups{margin-top:16px}
+.misplaced-groups .slot input{color:#806126}
+.misplaced-groups .slot input.filled{background:#fff5d8;border-color:#c4a653}

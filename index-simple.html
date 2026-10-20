@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tra từ</title>
+    <script src="words-data.js" defer></script>
+</head>
+<body>
+    <form id="search-form">
+        <label>Tổng <input id="total-count" type="text" inputmode="numeric" pattern="[0-9]+" size="3" maxlength="2" value="7" required title="1–60 ký tự, không tính khoảng trắng"></label>
+        <label>Tiếng 1 <input id="first-count" type="text" inputmode="numeric" pattern="[0-9]+" size="3" maxlength="2" title="Không bắt buộc"></label>
+        <button type="submit">Tìm</button>
+    </form>
+    <p id="request-status" role="alert" hidden></p>
+    <div id="filter-panel" hidden>
+        <p><span id="letter-groups" role="group" aria-label="Ký tự đúng vị trí"></span><button id="clear-letters" type="button" title="Xóa vị trí" aria-label="Xóa vị trí">×</button> Đúng ô</p>
+        <p><span id="misplaced-groups" role="group" aria-label="Ký tự đúng nhưng sai vị trí"></span><button id="clear-misplaced" type="button" title="Xóa hàng sai vị trí" aria-label="Xóa hàng sai vị trí">×</button> Sai ô</p>
+        <p>
+            <label>Có <input id="required-letters" size="10" autocomplete="off" autocapitalize="none" spellcheck="false" title="Các chữ phải có"></label>
+            <label>Không <input id="excluded-letters" size="10" autocomplete="off" autocapitalize="none" spellcheck="false" title="Các chữ không có"></label>
+            <button id="clear-clues" type="button" title="Xóa bộ lọc" aria-label="Xóa bộ lọc">×</button>
+        </p>
+        <label><input id="ignore-accents" type="checkbox">Bỏ dấu</label>
+        <p id="clue-conflict" role="status" hidden></p>
+    </div>
+    <p><output id="result-count" aria-label="Số từ khớp trên tổng số từ" aria-live="polite"></output></p>
+    <p id="empty-state" hidden></p>
+    <p id="word-list" hidden></p>
+    <button id="show-more" type="button" hidden>Thêm</button>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        'use strict';
+
+        const form = document.querySelector('#search-form');
+        const totalCountInput = document.querySelector('#total-count');
+        const firstCountInput = document.querySelector('#first-count');
+        const status = document.querySelector('#request-status');
+        const filterPanel = document.querySelector('#filter-panel');
+        const groups = document.querySelector('#letter-groups');
+        const misplacedGroups = document.querySelector('#misplaced-groups');
+        const ignoreAccents = document.querySelector('#ignore-accents');
+        const requiredLetters = document.querySelector('#required-letters');
+        const excludedLetters = document.querySelector('#excluded-letters');
+        const clueConflict = document.querySelector('#clue-conflict');
+        const list = document.querySelector('#word-list');
+        const empty = document.querySelector('#empty-state');
+        const badge = document.querySelector('#result-count');
+        const more = document.querySelector('#show-more');
+        let words = [];
+        let matches = [];
+        let slots = [];
+        let misplacedSlots = [];
+        let rendered = 0;
+        let wordIndex = null;
+        const pageSize = 120;
+        const segmenter = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter('vi', { granularity: 'grapheme' }) : null;
+        const normalize = text => text.normalize('NFC');
+        const chars = text => segmenter ? Array.from(segmenter.segment(normalize(text)), part => part.segment) : Array.from(normalize(text));
+        const number = value => value.toLocaleString('vi-VN');
+
+        function getWordIndex() {
+            if (wordIndex) return wordIndex;
+            if (!Array.isArray(window.WORDS_DATA?.words)) {
+                throw new Error('Thiếu words-data.js.');
+            }
+            const index = new Map();
+            for (const row of window.WORDS_DATA.words) {
+                if (typeof row.text !== 'string' || !Number.isInteger(row.count_1) || !Number.isInteger(row.count_2)) continue;
+                const key = row.count_1 + row.count_2;
+                if (!index.has(key)) index.set(key, []);
+                index.get(key).push(row.text);
+            }
+            wordIndex = index;
+            return wordIndex;
+        }
+
+        function fold(text) {
+            text = normalize(text).toLocaleLowerCase('vi');
+            return ignoreAccents.checked ? text.normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd') : text;
+        }
+
+        function clueLetters(input) {
+            // Ignore separators without modifying the input while the user is typing Vietnamese.
+            return [...new Set(chars(input.value).filter(character => /^\p{L}\p{M}*$/u.test(character)).map(fold))];
+        }
+
+        function showEmpty(message) {
+            empty.textContent = message;
+            empty.hidden = !message;
+            list.hidden = true;
+            more.hidden = true;
+        }
+
+        function resetResults() {
+            words = [];
+            matches = [];
+            slots = [];
+            misplacedSlots = [];
+            filterPanel.hidden = true;
+            requiredLetters.value = '';
+            excludedLetters.value = '';
+            clueConflict.hidden = true;
+            clueConflict.textContent = '';
+            list.replaceChildren();
+            groups.replaceChildren();
+            misplacedGroups.replaceChildren();
+            badge.textContent = '—';
+        }
+
+        function createSlots(count, container, rowSlots, label) {
+            for (let index = 0; index < count; index++) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.size = 1;
+                input.placeholder = '·';
+                input.autocomplete = 'off';
+                input.spellcheck = false;
+                input.setAttribute('autocapitalize', 'none');
+                input.setAttribute('aria-label', `${label} ${index + 1}`);
+                input.title = `${label} ${index + 1}`;
+                const update = () => {
+                    input.value = chars(input.value.replace(/\s/gu, '')).slice(0, 1).join('');
+                    filterWords();
+                };
+                input.addEventListener('input', event => { if (!event.isComposing) update(); });
+                input.addEventListener('compositionend', update);
+                input.addEventListener('keydown', event => {
+                    if (event.isComposing) return;
+                    let target;
+                    if (event.key === 'ArrowRight') target = rowSlots[index + 1];
+                    if (event.key === 'ArrowLeft' || (event.key === 'Backspace' && !input.value)) target = rowSlots[index - 1];
+                    if (target) { event.preventDefault(); target.focus(); target.select(); }
+                });
+                input.addEventListener('focus', () => input.select());
+                input.addEventListener('paste', event => {
+                    const pasted = chars((event.clipboardData?.getData('text') || '').replace(/\s/gu, ''));
+                    if (!pasted.length) return;
+                    event.preventDefault();
+                    pasted.slice(0, count - index).forEach((character, offset) => {
+                        rowSlots[index + offset].value = character;
+                    });
+                    filterWords();
+                });
+                container.append(input, ' ');
+                rowSlots.push(input);
+            }
+        }
+
+        function renderMore() {
+            const required = new Set([...clueLetters(requiredLetters), ...misplacedSlots.map(input => fold(input.value)).filter(Boolean)]);
+            const fragment = document.createDocumentFragment();
+            const end = Math.min(rendered + pageSize, matches.length);
+            for (let i = rendered; i < end; i++) {
+                const card = document.createElement('span');
+                let position = 0;
+                matches[i].parts.forEach((part, groupIndex) => {
+                    if (groupIndex) card.append(' ');
+                    part.forEach(character => {
+                        if (slots[position].value || required.has(fold(character))) {
+                            const mark = document.createElement('mark');
+                            mark.textContent = character;
+                            card.append(mark);
+                        } else card.append(character);
+                        position++;
+                    });
+                });
+                if (i > 0) fragment.append(' · ');
+                fragment.append(card);
+            }
+            list.append(fragment);
+            rendered = end;
+            more.hidden = rendered >= matches.length;
+            more.textContent = 'Thêm';
+        }
+
+        function filterWords() {
+            const pattern = slots.map(input => fold(input.value));
+            const wrongPattern = misplacedSlots.map(input => fold(input.value));
+            const required = [...new Set([...clueLetters(requiredLetters), ...wrongPattern.filter(Boolean)])];
+            const excluded = new Set(clueLetters(excludedLetters));
+            const conflicts = [...new Set([
+                ...[...required, ...pattern].filter(character => character && excluded.has(character)),
+                ...pattern.filter((character, index) => character && character === wrongPattern[index]),
+            ])];
+            clueConflict.hidden = conflicts.length === 0;
+            clueConflict.textContent = conflicts.length ? `Mâu thuẫn: ${conflicts.join(', ')}` : '';
+            matches = words.filter(word => {
+                if (!word.letters.every((character, index) => !pattern[index] || fold(character) === pattern[index])) return false;
+                if (word.letters.some((character, index) => wrongPattern[index] && fold(character) === wrongPattern[index])) return false;
+                const present = new Set(word.letters.map(fold));
+                return required.every(character => present.has(character)) && [...excluded].every(character => !present.has(character));
+            });
+            list.replaceChildren();
+            rendered = 0;
+            badge.textContent = `${number(matches.length)} / ${number(words.length)}`;
+            if (!matches.length) {
+                showEmpty('Không có từ.');
+                return;
+            }
+            empty.hidden = true;
+            list.hidden = false;
+            renderMore();
+        }
+
+        function validateCounts() {
+            const total = Number(totalCountInput.value);
+            const first = Number(firstCountInput.value);
+            totalCountInput.setCustomValidity(Number.isInteger(total) && total >= 1 && total <= 60 ? '' : 'Tổng: 1–60.');
+            firstCountInput.setCustomValidity(firstCountInput.value === '' || (Number.isInteger(first) && first >= 1 && first < total) ? '' : 'Tiếng 1 phải từ 1 và nhỏ hơn tổng.');
+        }
+
+        form.addEventListener('submit', event => {
+            event.preventDefault();
+            validateCounts();
+            if (!form.reportValidity()) return;
+            resetResults();
+            status.hidden = true;
+            const total = Number(totalCountInput.value);
+            const firstCount = firstCountInput.value === '' ? null : Number(firstCountInput.value);
+            try {
+                const candidates = getWordIndex().get(total) || [];
+                const seen = new Set();
+                words = candidates.flatMap(text => {
+                    const cleaned = normalize(text.trim()).replace(/\s+/gu, ' ');
+                    const parts = cleaned.split(' ').map(chars);
+                    const letters = parts.flat();
+                    const key = cleaned.toLocaleLowerCase('vi');
+                    if (seen.has(key) || parts.length !== 2 || letters.length !== total) return [];
+                    if (firstCount !== null && parts[0].length !== firstCount) return [];
+                    seen.add(key);
+                    return [{ text: cleaned, parts, letters }];
+                }).sort((a, b) => a.text.localeCompare(b.text, 'vi'));
+                createSlots(total, groups, slots, 'Đúng ô');
+                createSlots(total, misplacedGroups, misplacedSlots, 'Sai ô');
+                filterPanel.hidden = false;
+                status.hidden = true;
+                filterWords();
+            } catch (error) {
+                status.hidden = false;
+                status.textContent = error.message;
+                showEmpty('');
+            }
+        });
+
+        [totalCountInput, firstCountInput].forEach(input => input.addEventListener('input', () => {
+            validateCounts();
+            status.hidden = true;
+            resetResults();
+            showEmpty('');
+        }));
+        validateCounts();
+        document.querySelector('#clear-letters').addEventListener('click', () => {
+            slots.forEach(input => { input.value = ''; });
+            filterWords();
+            slots[0]?.focus();
+        });
+        document.querySelector('#clear-misplaced').addEventListener('click', () => {
+            misplacedSlots.forEach(input => { input.value = ''; });
+            filterWords();
+            misplacedSlots[0]?.focus();
+        });
+        [requiredLetters, excludedLetters].forEach(input => {
+            input.addEventListener('input', event => { if (!event.isComposing) filterWords(); });
+            input.addEventListener('compositionend', filterWords);
+        });
+        document.querySelector('#clear-clues').addEventListener('click', () => {
+            requiredLetters.value = '';
+            excludedLetters.value = '';
+            filterWords();
+            requiredLetters.focus();
+        });
+        ignoreAccents.addEventListener('change', filterWords);
+        more.addEventListener('click', renderMore);
+    });
+    </script>
+</body>
+</html>

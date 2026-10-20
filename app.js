@@ -6,6 +6,7 @@ const firstCountInput = document.querySelector('#first-count');
 const status = document.querySelector('#request-status');
 const filterPanel = document.querySelector('#filter-panel');
 const groups = document.querySelector('#letter-groups');
+const misplacedGroups = document.querySelector('#misplaced-groups');
 const ignoreAccents = document.querySelector('#ignore-accents');
 const requiredLetters = document.querySelector('#required-letters');
 const excludedLetters = document.querySelector('#excluded-letters');
@@ -18,6 +19,7 @@ const more = document.querySelector('#show-more');
 let words = [];
 let matches = [];
 let slots = [];
+let misplacedSlots = [];
 let rendered = 0;
 let wordIndex = null;
 const pageSize = 120;
@@ -64,6 +66,7 @@ function resetResults() {
     words = [];
     matches = [];
     slots = [];
+    misplacedSlots = [];
     filterPanel.hidden = true;
     requiredLetters.value = '';
     excludedLetters.value = '';
@@ -71,14 +74,15 @@ function resetResults() {
     clueConflict.textContent = '';
     list.replaceChildren();
     groups.replaceChildren();
+    misplacedGroups.replaceChildren();
     badge.textContent = '—';
 }
 
-function createSlots(count) {
+function createSlots(count, container, rowSlots, rowLabel) {
     const group = document.createElement('div');
     group.className = 'letter-group';
     const heading = document.createElement('h3');
-    heading.textContent = `${count} ký tự · Không tính khoảng trắng`;
+    heading.textContent = `${rowLabel} · ${count} ký tự`;
     const row = document.createElement('div');
     row.className = 'slots';
     for (let index = 0; index < count; index++) {
@@ -90,7 +94,7 @@ function createSlots(count) {
         input.autocomplete = 'off';
         input.spellcheck = false;
         input.setAttribute('autocapitalize', 'none');
-        input.setAttribute('aria-label', `Ký tự ${index + 1}`);
+        input.setAttribute('aria-label', `${rowLabel}: ký tự ${index + 1}`);
         // Không dùng maxlength / tự chuyển ô: bộ gõ tiếng Việt cần hoàn thành dấu.
         const update = () => {
             input.value = chars(input.value.replace(/\s/gu, '')).slice(0, 1).join('');
@@ -102,8 +106,8 @@ function createSlots(count) {
         input.addEventListener('keydown', event => {
             if (event.isComposing) return;
             let target;
-            if (event.key === 'ArrowRight') target = slots[index + 1];
-            if (event.key === 'ArrowLeft' || (event.key === 'Backspace' && !input.value)) target = slots[index - 1];
+            if (event.key === 'ArrowRight') target = rowSlots[index + 1];
+            if (event.key === 'ArrowLeft' || (event.key === 'Backspace' && !input.value)) target = rowSlots[index - 1];
             if (target) { event.preventDefault(); target.focus(); target.select(); }
         });
         input.addEventListener('focus', () => input.select());
@@ -112,7 +116,7 @@ function createSlots(count) {
             if (!pasted.length) return;
             event.preventDefault();
             pasted.slice(0, count - index).forEach((character, offset) => {
-                const target = slots[index + offset];
+                const target = rowSlots[index + offset];
                 target.value = character;
                 target.classList.add('filled');
             });
@@ -123,14 +127,14 @@ function createSlots(count) {
         position.setAttribute('aria-hidden', 'true');
         label.append(input, position);
         row.append(label);
-        slots.push(input);
+        rowSlots.push(input);
     }
     group.append(heading, row);
-    groups.append(group);
+    container.append(group);
 }
 
 function renderMore() {
-    const required = new Set(clueLetters(requiredLetters));
+    const required = new Set([...clueLetters(requiredLetters), ...misplacedSlots.map(input => fold(input.value)).filter(Boolean)]);
     const fragment = document.createDocumentFragment();
     const end = Math.min(rendered + pageSize, matches.length);
     for (let i = rendered; i < end; i++) {
@@ -158,13 +162,18 @@ function renderMore() {
 
 function filterWords() {
     const pattern = slots.map(input => fold(input.value));
-    const required = clueLetters(requiredLetters);
+    const wrongPattern = misplacedSlots.map(input => fold(input.value));
+    const required = [...new Set([...clueLetters(requiredLetters), ...wrongPattern.filter(Boolean)])];
     const excluded = new Set(clueLetters(excludedLetters));
-    const conflicts = [...new Set([...required, ...pattern].filter(character => character && excluded.has(character)))];
+    const conflicts = [...new Set([
+        ...[...required, ...pattern].filter(character => character && excluded.has(character)),
+        ...pattern.filter((character, index) => character && character === wrongPattern[index]),
+    ])];
     clueConflict.hidden = conflicts.length === 0;
-    clueConflict.textContent = conflicts.length ? `Gợi ý mâu thuẫn: ${conflicts.join(', ')} vừa phải có, vừa bị loại. Hãy kiểm tra lại các chữ hoặc tùy chọn bỏ dấu.` : '';
+    clueConflict.textContent = conflicts.length ? `Gợi ý mâu thuẫn: ${conflicts.join(', ')} có điều kiện trái nhau. Hãy kiểm tra hàng đúng ô, sai ô, ký tự bị loại hoặc tùy chọn bỏ dấu.` : '';
     matches = words.filter(word => {
         if (!word.letters.every((character, index) => !pattern[index] || fold(character) === pattern[index])) return false;
+        if (word.letters.some((character, index) => wrongPattern[index] && fold(character) === wrongPattern[index])) return false;
         const present = new Set(word.letters.map(fold));
         return required.every(character => present.has(character)) && [...excluded].every(character => !present.has(character));
     });
@@ -210,7 +219,8 @@ form.addEventListener('submit', event => {
             seen.add(key);
             return [{ text: cleaned, parts, letters }];
         }).sort((a, b) => a.text.localeCompare(b.text, 'vi'));
-        createSlots(total);
+        createSlots(total, groups, slots, 'Đúng ô');
+        createSlots(total, misplacedGroups, misplacedSlots, 'Sai ô');
         filterPanel.hidden = false;
         status.hidden = true;
         filterWords();
@@ -235,6 +245,11 @@ document.querySelector('#clear-letters').addEventListener('click', () => {
     slots.forEach(input => { input.value = ''; input.classList.remove('filled'); });
     filterWords();
     slots[0]?.focus();
+});
+document.querySelector('#clear-misplaced').addEventListener('click', () => {
+    misplacedSlots.forEach(input => { input.value = ''; input.classList.remove('filled'); });
+    filterWords();
+    misplacedSlots[0]?.focus();
 });
 [requiredLetters, excludedLetters].forEach(input => {
     input.addEventListener('input', event => { if (!event.isComposing) filterWords(); });
